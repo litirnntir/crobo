@@ -1,12 +1,13 @@
 import datetime
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
 import requests
 from PyQt6 import QtCharts, QtWidgets
-
+from datetime import date, timedelta
 from PyQt6 import QtCore
 
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont
@@ -19,6 +20,26 @@ CODE_LICENSE = "AAAAABljWUkaZ6D-xWlhfYwWoLZfMGrxg0TgwfiBZbvaja5Doz0EfPZj6AV-Ilcc
 
 
 # Сборка:  pyinstaller main.spec
+
+def reset_json(filename: str) -> None:
+    """Очищает json файл и снова шифрует его"""
+    with open(filename, "w") as f:
+        f.write("{}")
+
+
+def clear_folder(folder_path):
+    for filename in os.listdir(folder_path):
+        # Получаем полный путь к файлу или подпапке
+        file_path = os.path.join(folder_path, filename)
+        # Проверяем, является ли это файлом или ссылкой
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            # Удаляем файл или ссылку
+            os.unlink(file_path)
+        # Проверяем, является ли это подпапкой
+        elif os.path.isdir(file_path):
+            # Удаляем подпапку и все ее содержимое
+            shutil.rmtree(file_path)
+
 
 # Абсолютный путь
 def resource_path(relative_path: str) -> str:
@@ -101,7 +122,7 @@ class TimeTracker(QWidget):
         font.setPointSize(20)
         self.setFont(font)
         # Путь до файла
-        self.path_write = resource_path("stats.txt")
+        self.path_write = resource_path("")
         # Фон
         background_image = resource_path("background.png")
         pix = QPixmap(background_image)
@@ -110,7 +131,7 @@ class TimeTracker(QWidget):
         self.setPalette(pal)
         # заголовок, размер и положение окна
         self.setWindowTitle('Хронометраж')
-        self.setFixedSize(800, 600)
+        self.setFixedSize(800, 700)
 
         # лицензия
         if os.path.exists(resource_path("key.txt")):
@@ -137,11 +158,23 @@ class TimeTracker(QWidget):
         self.stop_button.setFixedSize(350, 40)
         self.path_button = QPushButton('Путь для отчета')
         self.path_button.setFixedSize(350, 40)
-        self.show_diagram_button = QPushButton('Показать диаграмму')
-        self.show_diagram_button.setFixedSize(350, 40)
-        self.report_button = QPushButton('Отчет')
-        self.report_button.setEnabled(False)
-        self.report_button.setFixedSize(350, 40)
+        self.show_diagram_all_button = QPushButton('Диаграмма за все время')
+        self.show_diagram_all_button.setFixedSize(350, 40)
+        self.show_diagram_week_button = QPushButton('Диаграмма за неделю')
+        self.show_diagram_week_button.setFixedSize(350, 40)
+        self.show_diagram_today_button = QPushButton('Диаграмма за сегодня')
+        self.show_diagram_today_button.setFixedSize(350, 40)
+        self.report_all_button = QPushButton('Отчет за все время')
+        self.report_all_button.setEnabled(False)
+        self.report_all_button.setFixedSize(350, 40)
+        self.report_week_button = QPushButton('Отчет за неделю')
+        self.report_week_button.setEnabled(True)
+        self.report_week_button.setFixedSize(350, 40)
+        self.report_today_button = QPushButton('Отчет за день')
+        self.report_today_button.setEnabled(True)
+        self.report_today_button.setFixedSize(350, 40)
+        self.reset_button = QPushButton('Сбросить статистику')
+        self.reset_button.setFixedSize(350, 40)
         self.all_time_radio = QRadioButton('Без лимита')
         self.all_time_radio.setStyleSheet("color: white; font-size: 22px;")
         self.all_time_radio.setFixedSize(350, 40)
@@ -163,9 +196,14 @@ class TimeTracker(QWidget):
         self.pause_button.setEnabled(False)
         self.time_edit.setEnabled(False)
         self.timer = QTimer()
-        with open(str(resource_path("stats.json")), "r") as file:
-            data = json.load(file)
-        self.processes = data # процессы и время
+        if not os.path.exists(resource_path("stats.json")):
+            with open(resource_path("stats.json"), "w") as f:
+                f.write("{}")
+                data = {}
+        else:
+            with open(str(resource_path("stats.json")), "r") as file:
+                data = json.load(file)
+        self.processes = data  # процессы и время
         self.current_process = None
         self.start_time = None
         self.pause_time = None
@@ -181,10 +219,15 @@ class TimeTracker(QWidget):
         # сигналы и слоты для обработки событий
         self.start_button.clicked.connect(self.start)
         self.pause_button.clicked.connect(self.pause)
-        self.show_diagram_button.clicked.connect(self.show_diagram)
+        self.show_diagram_all_button.clicked.connect(self.show_diagram_all_time)
+        self.show_diagram_week_button.clicked.connect(self.show_diagram_week)
+        self.show_diagram_today_button.clicked.connect(self.show_diagram_today)
+        self.reset_button.clicked.connect(self.reset_stats)
         self.stop_button.clicked.connect(self.stop)
         self.stop_button.setEnabled(False)
-        self.report_button.clicked.connect(self.report)
+        self.report_all_button.clicked.connect(self.report_all_time)
+        self.report_week_button.clicked.connect(self.report_week_time)
+        self.report_today_button.clicked.connect(self.report_today)
         self.path_button.clicked.connect(self.select_path)
 
         # сигналы и слоты для таймера и переключателя
@@ -205,9 +248,14 @@ class TimeTracker(QWidget):
         self.left_layout.addWidget(self.pause_button)
         self.left_layout.addWidget(self.stop_button)
         self.left_layout.addWidget(self.path_button)
-        self.left_layout.addWidget(self.show_diagram_button)
+        self.left_layout.addWidget(self.show_diagram_all_button)
+        self.left_layout.addWidget(self.show_diagram_week_button)
+        self.left_layout.addWidget(self.show_diagram_today_button)
         self.left_layout.addWidget(self.label_directory)
-        self.left_layout.addWidget(self.report_button)
+        self.left_layout.addWidget(self.report_all_button)
+        self.left_layout.addWidget(self.report_week_button)
+        self.left_layout.addWidget(self.report_today_button)
+        self.left_layout.addWidget(self.reset_button)
         self.left_layout.addWidget(self.all_time_radio)
         self.left_layout.addWidget(self.timer_radio)
         self.left_layout.addWidget(self.time_edit)
@@ -215,10 +263,81 @@ class TimeTracker(QWidget):
         self.main_layout.addLayout(self.left_layout)
         self.main_layout.addLayout(self.right_layout)
 
+        self.add_to_table()
+
         self.setLayout(self.main_layout)
         self.show()
 
-    def show_diagram(self) -> None:
+    def show_diagram_today(self, period="all_time") -> None:
+        """
+        Отображает диаграмму с процентным распределением времени, проведенного в разных приложениях.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
+        if os.path.exists(resource_path(f"jsons/{date.today()}")):
+            with open(resource_path(f"jsons/{date.today()}"), "r") as f:
+                data = json.load(f)
+            self.chart_window = QtWidgets.QMainWindow()
+            self.chart_widget = QtCharts.QChartView()
+            self.chart = QtCharts.QChart()
+            self.series = QtCharts.QBarSeries()
+            for app, time in data.items():
+                bar = QtCharts.QBarSet(app)
+                bar.append(time / self.sum_values() * 100)
+                self.series.append(bar)
+            self.chart.addSeries(self.series)
+            self.axis_x = QtCharts.QBarCategoryAxis()
+            self.axis_y = QtCharts.QValueAxis()
+            self.axis_x.setTitleText("Приложения")
+            self.axis_y.setTitleText("Процент использования")
+            self.chart.addAxis(self.axis_x, QtCore.Qt.AlignmentFlag.AlignBottom)
+            self.chart.addAxis(self.axis_y, QtCore.Qt.AlignmentFlag.AlignLeft)
+            self.series.attachAxis(self.axis_x)
+            self.series.attachAxis(self.axis_y)
+            self.chart.setTitle("Время, проведенное в приложениях сегодня")
+            self.chart_widget.setChart(self.chart)
+            self.chart_window.setCentralWidget(self.chart_widget)
+            self.chart_window.show()
+        else:
+            message("Статистика за сегодняший день не найдена")
+
+    def show_diagram_week(self) -> None:
+        """
+        Отображает диаграмму с процентным распределением времени, проведенного в разных приложениях.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
+        self.make_week_file()
+        if os.path.exists(resource_path(f"jsons/weekly_summary.json")):
+            with open(resource_path(f"jsons/weekly_summary.json"), "r") as f:
+                data = json.load(f)
+            self.chart_window = QtWidgets.QMainWindow()
+            self.chart_widget = QtCharts.QChartView()
+            self.chart = QtCharts.QChart()
+            self.series = QtCharts.QBarSeries()
+            for app, time in data.items():
+                bar = QtCharts.QBarSet(app)
+                bar.append(time / self.sum_values() * 100)
+                self.series.append(bar)
+            self.chart.addSeries(self.series)
+            self.axis_x = QtCharts.QBarCategoryAxis()
+            self.axis_y = QtCharts.QValueAxis()
+            self.axis_x.setTitleText("Приложения")
+            self.axis_y.setTitleText("Процент использования")
+            self.chart.addAxis(self.axis_x, QtCore.Qt.AlignmentFlag.AlignBottom)
+            self.chart.addAxis(self.axis_y, QtCore.Qt.AlignmentFlag.AlignLeft)
+            self.series.attachAxis(self.axis_x)
+            self.series.attachAxis(self.axis_y)
+            self.chart.setTitle("Время, проведенное в приложениях за неделю")
+            self.chart_widget.setChart(self.chart)
+            self.chart_window.setCentralWidget(self.chart_widget)
+            self.chart_window.show()
+
+    def show_diagram_all_time(self) -> None:
         """
         Отображает диаграмму с процентным распределением времени, проведенного в разных приложениях.
 
@@ -243,7 +362,7 @@ class TimeTracker(QWidget):
         self.chart.addAxis(self.axis_y, QtCore.Qt.AlignmentFlag.AlignLeft)
         self.series.attachAxis(self.axis_x)
         self.series.attachAxis(self.axis_y)
-        self.chart.setTitle("Время, проведенное в приложениях")
+        self.chart.setTitle("Общее время, проведенное в приложениях")
         self.chart_widget.setChart(self.chart)
         self.chart_window.setCentralWidget(self.chart_widget)
         self.chart_window.show()
@@ -265,7 +384,7 @@ class TimeTracker(QWidget):
         if dialog.exec() == QFileDialog.DialogCode.Accepted:
             path = dialog.selectedFiles()[0]
             # обновляем метку с выбранным путем
-            self.path_write = path + "/stats.txt"
+            self.path_write = path
             # здесь можно добавить код для загрузки отчета в выбранную папку
         self.label_directory.setText(f"Путь: {self.path_write}")
 
@@ -332,7 +451,28 @@ class TimeTracker(QWidget):
         except:
             pass
 
-    def report(self) -> None:
+    def make_week_file(self):
+        result = {}
+        end_date = date.today()
+        start_date = end_date - timedelta(days=6)
+
+        for single_date in (start_date + timedelta(n) for n in range(7)):
+            date_str = single_date.strftime("%Y-%m-%d")
+            file_path = resource_path(resource_path(f"jsons/{date_str}"))
+
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as file:
+                    data = json.load(file)
+                    for app, time in data.items():
+                        if app in result:
+                            result[app] += time
+                        else:
+                            result[app] = time
+
+        with open(resource_path('jsons/weekly_summary.json'), 'w') as output_file:
+            json.dump(result, output_file)
+
+    def report_all_time(self) -> None:
         """
         Сохраняет отчет о времени, проведенном в разных приложениях, в текстовый файл и отправляет его в Telegram.
 
@@ -342,12 +482,54 @@ class TimeTracker(QWidget):
         """
         self.current_process = None
 
-        with open(self.path_write, "w") as f:
+        with open(self.path_write + "/stats.txt", "w") as f:
             f.write(f"Общее время: {format_time(self.total_time)}\n\n")
             f.write(f"Время в приложениях:\n")
             for app, time in self.processes.items():
                 f.write(f"{{{app}: {str(datetime.timedelta(seconds=time))}}}\n")
         self.send_to_telegram()
+
+    def report_week_time(self) -> None:
+        """
+        Сохраняет отчет о времени, проведенном в разных приложениях, в текстовый файл и отправляет его в Telegram.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
+        self.current_process = None
+        self.make_week_file()
+        with open(resource_path("jsons/weekly_summary.json"), "r") as f:
+            data = dict(json.load(f))
+
+        with open(self.path_write + "/weekly_summary.txt", "w") as f:
+            f.write(f"Общее время: {format_time(self.total_time)}\n\n")
+            f.write(f"Время в приложениях:\n")
+            for app, time in data.items():
+                f.write(f"{{{app}: {str(datetime.timedelta(seconds=time))}}}\n")
+        self.send_to_telegram()
+
+    def report_today(self) -> None:
+        """
+        Сохраняет отчет о времени, проведенном в разных приложениях, в текстовый файл и отправляет его в Telegram.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
+        self.current_process = None
+        if os.path.exists(resource_path(f"jsons/{date.today()}")):
+            with open(resource_path(f"jsons/{date.today()}"), "r") as f:
+                data = dict(json.load(f))
+
+            with open(self.path_write + f"/{date.today()}.txt", "w") as f:
+                f.write(f"Общее время: {format_time(self.total_time)}\n\n")
+                f.write(f"Время в приложениях:\n")
+                for app, time in data.items():
+                    f.write(f"{{{app}: {str(datetime.timedelta(seconds=time))}}}\n")
+            self.send_to_telegram()
+        else:
+            message("Статистика за сегодня отсутствует")
 
     def start(self) -> None:
         """
@@ -358,7 +540,9 @@ class TimeTracker(QWidget):
         Ничего не возвращает.
         """
         self.set_mode()
-        self.report_button.setEnabled(True)
+        self.report_all_button.setEnabled(True)
+        self.report_week_button.setEnabled(True)
+        self.report_today_button.setEnabled(True)
         self.timer_radio.setEnabled(False)
         self.all_time_radio.setEnabled(False)
         self.time_edit.setEnabled(False)
@@ -379,7 +563,9 @@ class TimeTracker(QWidget):
         self.pause_button.setEnabled(False)
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(True)
-        self.report_button.setEnabled(True)
+        self.report_all_button.setEnabled(True)
+        self.report_week_button.setEnabled(True)
+        self.report_today_button.setEnabled(True)
         self.current_process = None
         self.timer.stop()
         self.pause_time = QTime.currentTime()
@@ -393,8 +579,8 @@ class TimeTracker(QWidget):
 
         Ничего не возвращает.
         """
-        self.report()
-        self.report_button.setEnabled(False)
+        self.report_all_time()
+        self.report_all_button.setEnabled(False)
         self.timer_radio.setEnabled(True)
         self.all_time_radio.setEnabled(True)
         self.pause_button.setEnabled(False)
@@ -405,7 +591,7 @@ class TimeTracker(QWidget):
         self.current_process = None
         self.start_time = None
         self.total_time = 0
-        self.processes = {}
+        # self.processes = {}
         self.clear_table()
 
         message('Считывание процессов завершено', icon_path=None, title="Успешно")
@@ -418,14 +604,17 @@ class TimeTracker(QWidget):
 
         Ничего не возвращает.
         """
-        self.process_table.setRowCount(len(self.processes))
-        row = 0
-        for app, time in self.processes.items():
-            app_item = QTableWidgetItem(app)
-            time_item = QTableWidgetItem(str(datetime.timedelta(seconds=time)))
-            self.process_table.setItem(row, 0, app_item)
-            self.process_table.setItem(row, 1, time_item)
-            row += 1
+        if os.path.exists(resource_path(f"jsons/{date.today()}")):
+            with open(resource_path(f"jsons/{date.today()}"), "r") as f:
+                data = dict(json.load(f))
+            self.process_table.setRowCount(len(data))
+            row = 0
+            for app, time in data.items():
+                app_item = QTableWidgetItem(app)
+                time_item = QTableWidgetItem(str(datetime.timedelta(seconds=time)))
+                self.process_table.setItem(row, 0, app_item)
+                self.process_table.setItem(row, 1, time_item)
+                row += 1
 
     def clear_table(self) -> None:
         """
@@ -438,6 +627,7 @@ class TimeTracker(QWidget):
         row_count = self.process_table.rowCount()
         for i in range(row_count - 1, -1, -1):
             self.process_table.removeRow(i)
+        self.process_table.setRowCount(0)
 
     def add_time_stats(self, app_name: str) -> None:
         """
@@ -453,12 +643,46 @@ class TimeTracker(QWidget):
             self.processes[app_name] += 1
         else:
             self.processes[app_name] = 1
+
+        if not os.path.exists(resource_path(f"jsons/{date.today()}")):
+            x = {}
+            f = open(resource_path(f"jsons/{date.today()}"), "w")
+            y = json.dumps(x)
+            f.write(y)
+            f.close()
+
+        with open(resource_path(f"jsons/{date.today()}"), "r+") as f:
+            data = dict(json.load(f))
+            if app_name in data:
+                data[app_name] = data[app_name] + 1
+                f.seek(0)
+                json.dump(data, f, ensure_ascii=False, indent=4)
+                f.truncate()
+            else:
+                data[app_name] = 1
+                f.seek(0)
+                json.dump(data, f, ensure_ascii=False, indent=4)
+                f.truncate()
+
+        # общая статистика
         with open(resource_path("stats.json"), "r+") as f:
-            data = json.load(f)
-            data[app_name] = self.processes[app_name]
-            f.seek(0)
-            json.dump(data, f, ensure_ascii=False, indent=4)
-            f.truncate()
+            data_set = dict(json.load(f))
+            if app_name in data_set:
+                data_set[app_name] = data_set[app_name] + 1
+                f.seek(0)
+                json.dump(data_set, f, ensure_ascii=False, indent=4)
+                f.truncate()
+            else:
+                data_set[app_name] = 1
+                f.seek(0)
+                json.dump(data_set, f, ensure_ascii=False, indent=4)
+                f.truncate()
+
+    def reset_stats(self):
+        reset_json(resource_path("stats.json"))
+        clear_folder(resource_path("jsons"))
+        self.processes = {}
+        self.clear_table()
 
     # Главный метод обработки
     def update(self) -> None:
@@ -473,7 +697,7 @@ class TimeTracker(QWidget):
             # Отправка в определенное время
             gmt4_time = time.gmtime(time.mktime(time.gmtime()) + 8 * 3600)  # GMT+4
             if self.send_time == time.strftime("%H:%M:%S", gmt4_time):
-                self.report()
+                self.report_all_time()
             active_process = get_active_app_name()
             self.add_time_stats(active_process)
             self.current_process = get_active_app_name()
