@@ -1,4 +1,5 @@
 import datetime
+import os
 import subprocess
 import sys
 import time
@@ -9,6 +10,18 @@ from PyQt6.QtWidgets import (QApplication, QWidget, QPushButton, QRadioButton, Q
                              QVBoxLayout, QHBoxLayout, QMessageBox, QLabel, QTableWidget, QHeaderView,
                              QAbstractItemView, QTableWidgetItem, QFileDialog)
 from PyQt6.QtCore import QTimer, QTime
+
+
+# Сборка:  pyinstaller main.spec
+
+# Абсолютный путь
+def resource_path(relative_path: str) -> str:
+    try:
+        # PyInstaller создает временную папку в _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 
 def message(text="", icon_path=None, title=""):
@@ -41,7 +54,7 @@ class TimeTracker(QWidget):
         font.setPointSize(20)
         self.setFont(font)
         # Фон
-        background_image = "background.png"
+        background_image = resource_path("background.png")
         pix = QPixmap(background_image)
         pal = QPalette()
         pal.setBrush(self.backgroundRole(), QBrush(pix))
