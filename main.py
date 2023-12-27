@@ -183,14 +183,14 @@ class TimeTracker(QWidget):
                 self.limit = None
 
     # Метод для установки лимита времени
-    def set_limit(self, time):
-        self.limit = time.hour() * 3600 + time.minute() * 60 + time.second()
+    def set_limit(self, time_limit):
+        self.limit = time_limit.hour() * 3600 + time_limit.minute() * 60 + time_limit.second()
 
-    def sum_time(self):
-        total_time = 0
-        for app, time in self.processes:
-            total_time += time
-        return total_time
+    def sum_values(self):
+        total = 0
+        for value in self.processes.values():
+            total += value
+        return total
 
     def send_to_telegram(self):
         message('Статистика успешно загружена', icon_path=None, title="Успешно")
@@ -198,20 +198,19 @@ class TimeTracker(QWidget):
         chat_id = "252415518"
         document = open(self.path_write, "rb")  # Открыть файл со статистикой
         url = f"https://api.telegram.org/bot{TOKEN}/sendDocument?chat_id={chat_id}"  # Сформировать URL для отправки документа
-        data = {f"caption": f"Cтатистика за последние: {format_time(self.sum_time())}"}  # Добавить подпись к документу
+        data = {f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
         requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
 
-
     def report(self):
-        # Обновить время для текущего процесса
         self.current_process = None
 
         with open(self.path_write, "w") as f:
-            f.write(f"Общее время: {self.total_time}\n\n")
+            f.write(f"Общее время: {format_time(self.total_time)}\n\n")
             f.write(f"Время в приложениях:\n")
             for app, time in self.processes.items():
                 f.write(f"{{{app}: {str(datetime.timedelta(seconds=time))}}}\n")
         self.send_to_telegram()
+
     def start(self):
         self.set_mode()
         self.report_button.setEnabled(True)
@@ -250,7 +249,6 @@ class TimeTracker(QWidget):
         self.processes = {}
         self.clear_table()
 
-        # Выводим сообщение о завершении считывания процессов
         message('Считывание процессов завершено', icon_path=None, title="Успешно")
 
     def add_to_table(self):
