@@ -19,12 +19,10 @@ from PyQt6.QtCore import QTimer, QTime
 
 # Абсолютный путь
 def resource_path(relative_path: str) -> str:
-    try:
-        # PyInstaller создает временную папку в _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+    user_dir = os.path.expanduser("~")
+    app_dir = os.path.join(user_dir, "Crono")
+    settings_file = os.path.join(app_dir, relative_path)
+    return settings_file
 
 
 def message(text="", icon_path=None, title=""):
@@ -305,7 +303,6 @@ class TimeTracker(QWidget):
 
     # Главный метод обработки
     def update(self):
-        print(self.processes)
         active_process = get_active_app_name()
         self.add_time_stats(active_process)
         self.current_process = get_active_app_name()
