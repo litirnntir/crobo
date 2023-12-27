@@ -1,2 +1,4 @@
 PyQt6==6.6.1
 requests==2.31.0
+PyQt6-Charts==6.6.1
+PyQt6-Charts-Qt6==6.6.1

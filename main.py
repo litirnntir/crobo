@@ -4,6 +4,9 @@ import subprocess
 import sys
 import time
 import requests
+from PyQt6 import QtWidgets, QtCharts
+
+from PyQt6 import QtCore, QtWidgets
 
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont
 from PyQt6.QtWidgets import (QApplication, QWidget, QPushButton, QRadioButton, QTimeEdit,
@@ -87,8 +90,8 @@ class TimeTracker(QWidget):
         self.stop_button.setFixedSize(350, 40)
         self.path_button = QPushButton('Путь для отчета')
         self.path_button.setFixedSize(350, 40)
-        self.show_diagramm_button = QPushButton('Показать диаграмму')
-        self.show_diagramm_button.setFixedSize(350, 40)
+        self.show_diagram_button = QPushButton('Показать диаграмму')
+        self.show_diagram_button.setFixedSize(350, 40)
         self.report_button = QPushButton('Отчет')
         self.report_button.setEnabled(False)
         self.report_button.setFixedSize(350, 40)
@@ -123,6 +126,7 @@ class TimeTracker(QWidget):
         # сигналы и слоты для обработки событий
         self.start_button.clicked.connect(self.start)
         self.pause_button.clicked.connect(self.pause)
+        self.show_diagram_button.clicked.connect(self.show_diagram)
         self.stop_button.clicked.connect(self.stop)
         self.stop_button.setEnabled(False)
         self.report_button.clicked.connect(self.report)
@@ -143,7 +147,7 @@ class TimeTracker(QWidget):
         self.left_layout.addWidget(self.pause_button)
         self.left_layout.addWidget(self.stop_button)
         self.left_layout.addWidget(self.path_button)
-        self.left_layout.addWidget(self.show_diagramm_button)
+        self.left_layout.addWidget(self.show_diagram_button)
         self.left_layout.addWidget(self.label_directory)
         self.left_layout.addWidget(self.report_button)
         self.left_layout.addWidget(self.all_time_radio)
@@ -155,6 +159,29 @@ class TimeTracker(QWidget):
         # главный макет для окна
         self.setLayout(self.main_layout)
         self.show()
+
+    def show_diagram(self):
+        self.chart_window = QtWidgets.QMainWindow()
+        self.chart_widget = QtCharts.QChartView()
+        self.chart = QtCharts.QChart()
+        self.series = QtCharts.QBarSeries()
+        for app, time in self.processes.items():
+            bar = QtCharts.QBarSet(app)
+            bar.append(time / self.sum_values() * 100)
+            self.series.append(bar)
+        self.chart.addSeries(self.series)
+        self.axis_x = QtCharts.QBarCategoryAxis()
+        self.axis_y = QtCharts.QValueAxis()
+        self.axis_x.setTitleText("Приложения")
+        self.axis_y.setTitleText("Процент использования")
+        self.chart.addAxis(self.axis_x, QtCore.Qt.AlignmentFlag.AlignBottom)
+        self.chart.addAxis(self.axis_y, QtCore.Qt.AlignmentFlag.AlignLeft)
+        self.series.attachAxis(self.axis_x)
+        self.series.attachAxis(self.axis_y)
+        self.chart.setTitle("Время, проведенное в приложениях")
+        self.chart_widget.setChart(self.chart)
+        self.chart_window.setCentralWidget(self.chart_widget)
+        self.chart_window.show()
 
     def select_path(self):
         # создаем диалоговое окно для выбора папки
@@ -198,7 +225,8 @@ class TimeTracker(QWidget):
         chat_id = "252415518"
         document = open(self.path_write, "rb")  # Открыть файл со статистикой
         url = f"https://api.telegram.org/bot{TOKEN}/sendDocument?chat_id={chat_id}"  # Сформировать URL для отправки документа
-        data = {f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
+        data = {
+            f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
         requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
 
     def report(self):
