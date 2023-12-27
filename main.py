@@ -63,7 +63,7 @@ class TimeTracker(QWidget):
         font.setPointSize(20)
         self.setFont(font)
         # Путь до файла
-        self.path_write = "stats.txt"
+        self.path_write = resource_path("stats.txt")
         # Фон
         background_image = resource_path("background.png")
         pix = QPixmap(background_image)
