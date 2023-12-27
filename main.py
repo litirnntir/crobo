@@ -4,9 +4,9 @@ import subprocess
 import sys
 import time
 import requests
-from PyQt6 import QtWidgets, QtCharts
+from PyQt6 import QtCharts
 
-from PyQt6 import QtCore, QtWidgets
+from PyQt6 import QtCore
 
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont
 from PyQt6.QtWidgets import (QApplication, QWidget, QPushButton, QRadioButton, QTimeEdit,
@@ -121,6 +121,7 @@ class TimeTracker(QWidget):
         self.mode = 'All time'
         self.limit = None
         self.total_time = 0
+
         # сигналы и слоты для обработки событий
         self.start_button.clicked.connect(self.start)
         self.pause_button.clicked.connect(self.pause)
@@ -129,16 +130,19 @@ class TimeTracker(QWidget):
         self.stop_button.setEnabled(False)
         self.report_button.clicked.connect(self.report)
         self.path_button.clicked.connect(self.select_path)
+
         # сигналы и слоты для таймера и переключателя
         self.all_time_radio.toggled.connect(self.set_mode)
         self.all_time_radio.setChecked(True)
         self.timer_radio.toggled.connect(self.set_mode)
         self.time_edit.timeChanged.connect(self.set_limit)
         self.timer.timeout.connect(self.update)
+
         # макеты для размещения виджетов
         self.left_layout = QVBoxLayout()
         self.right_layout = QVBoxLayout()
         self.main_layout = QHBoxLayout()
+
         # виджеты в макетах
         self.left_layout.addWidget(self.label_total_time)
         self.left_layout.addWidget(self.start_button)
@@ -154,22 +158,17 @@ class TimeTracker(QWidget):
         self.right_layout.addWidget(self.process_table)
         self.main_layout.addLayout(self.left_layout)
         self.main_layout.addLayout(self.right_layout)
+
         # главный макет для окна
         self.setLayout(self.main_layout)
         self.show()
 
     def show_diagram(self):
-        self.chart_window = QtWidgets.QMainWindow()
-        self.chart_widget = QtCharts.QChartView()
-        self.chart = QtCharts.QChart()
-        self.series = QtCharts.QBarSeries()
         for app, time in self.processes.items():
             bar = QtCharts.QBarSet(app)
             bar.append(time / self.sum_values() * 100)
             self.series.append(bar)
         self.chart.addSeries(self.series)
-        self.axis_x = QtCharts.QBarCategoryAxis()
-        self.axis_y = QtCharts.QValueAxis()
         self.axis_x.setTitleText("Приложения")
         self.axis_y.setTitleText("Процент использования")
         self.chart.addAxis(self.axis_x, QtCore.Qt.AlignmentFlag.AlignBottom)
@@ -288,9 +287,7 @@ class TimeTracker(QWidget):
             row += 1
 
     def clear_table(self):
-        # Получаем количество строк в таблице
         row_count = self.process_table.rowCount()
-        # Удаляем каждую строку, начиная с последней
         for i in range(row_count - 1, -1, -1):
             self.process_table.removeRow(i)
 
