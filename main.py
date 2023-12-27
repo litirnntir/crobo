@@ -4,7 +4,6 @@ import subprocess
 import sys
 import time
 import requests
-from PyQt6 import QtCore
 
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont
 from PyQt6.QtWidgets import (QApplication, QWidget, QPushButton, QRadioButton, QTimeEdit,
@@ -33,6 +32,13 @@ def message(text="", icon_path=None, title=""):
     msg.setText(text)
     msg.setWindowTitle(title)
     msg.exec()
+
+
+def format_time(seconds):
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
 def get_active_app_name():
@@ -70,8 +76,8 @@ class TimeTracker(QWidget):
         self.label_total_time.setStyleSheet("color: white; font-size: 22px")
         self.label_total_time.setFixedSize(400, 30)
         self.label_directory = QLabel(f"Путь: {self.path_write}")
-        self.label_directory.setStyleSheet("color: white; font-size: 14px")
-        self.label_directory.setFixedSize(300, 10)
+        self.label_directory.setStyleSheet("color: white; font-size: 18px")
+        self.label_directory.setFixedSize(300, 30)
         # виджеты для кнопок, переключателей, таймера и списка
         self.start_button = QPushButton('Старт')
         self.start_button.setFixedSize(350, 40)
@@ -163,6 +169,7 @@ class TimeTracker(QWidget):
             self.path_write = path + "/stats.txt"
             # здесь можно добавить код для загрузки отчета в выбранную папку
         self.label_directory.setText(f"Путь: {self.path_write}")
+
     # Метод для обработки переключения режима работы
     def set_mode(self):
         radio = self.sender()
@@ -179,6 +186,22 @@ class TimeTracker(QWidget):
     def set_limit(self, time):
         self.limit = time.hour() * 3600 + time.minute() * 60 + time.second()
 
+    def sum_time(self):
+        total_time = 0
+        for app, time in self.processes:
+            total_time += time
+        return total_time
+
+    def send_to_telegram(self):
+        message('Статистика успешно загружена', icon_path=None, title="Успешно")
+        TOKEN = "6696395500:AAE-WNkKmbgBe-Oi8VkopcKmavYzWpHlfrc"
+        chat_id = "252415518"
+        document = open(self.path_write, "rb")  # Открыть файл со статистикой
+        url = f"https://api.telegram.org/bot{TOKEN}/sendDocument?chat_id={chat_id}"  # Сформировать URL для отправки документа
+        data = {f"caption": f"Cтатистика за последние: {format_time(self.sum_time())}"}  # Добавить подпись к документу
+        requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
+
+
     def report(self):
         # Обновить время для текущего процесса
         self.current_process = None
@@ -188,15 +211,7 @@ class TimeTracker(QWidget):
             f.write(f"Время в приложениях:\n")
             for app, time in self.processes.items():
                 f.write(f"{{{app}: {str(datetime.timedelta(seconds=time))}}}\n")
-
-        message('Статистика успешно загружена', icon_path=None, title="Успешно")
-        TOKEN = "6696395500:AAE-WNkKmbgBe-Oi8VkopcKmavYzWpHlfrc"
-        chat_id = "252415518"
-        document = open(self.path_write, "rb")  # Открыть файл со статистикой
-        url = f"https://api.telegram.org/bot{TOKEN}/sendDocument?chat_id={chat_id}"  # Сформировать URL для отправки документа
-        data = {"caption": "Это моя статистика"}  # Добавить подпись к документу
-        requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
-
+        self.send_to_telegram()
     def start(self):
         self.set_mode()
         self.report_button.setEnabled(True)
@@ -256,8 +271,7 @@ class TimeTracker(QWidget):
             self.process_table.removeRow(i)
 
     def add_time_stats(self, app_name):
-        if app_name != self.current_process:
-            self.add_to_table()
+        self.add_to_table()
         if app_name in self.processes:
             self.processes[app_name] += 1
         else:
@@ -265,6 +279,7 @@ class TimeTracker(QWidget):
 
     # Главный метод обработки
     def update(self):
+        print(self.processes)
         active_process = get_active_app_name()
         self.add_time_stats(active_process)
         self.current_process = get_active_app_name()
