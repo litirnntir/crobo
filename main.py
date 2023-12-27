@@ -20,13 +20,32 @@ from PyQt6.QtCore import QTimer, QTime
 
 # Абсолютный путь
 def resource_path(relative_path: str) -> str:
+    """
+    Возвращает абсолютный путь к файлу настроек приложения Crono.
+
+    Аргументы:
+        relative_path: относительный путь к файлу настроек относительно домашнего каталога пользователя.
+
+    Возвращает:
+        абсолютный путь к файлу настроек в виде строки.
+    """
     user_dir = os.path.expanduser("~")
     app_dir = os.path.join(user_dir, "Crono")
     settings_file = os.path.join(app_dir, relative_path)
     return settings_file
 
 
-def message(text="", icon_path=None, title=""):
+def message(text: str = "", icon_path: str = None, title: str = "") -> None:
+    """
+    Отображает сообщение в окне QMessageBox с заданным текстом, иконкой и заголовком.
+
+    Аргументы:
+        text: текст сообщения (по умолчанию пустой).
+        icon_path: путь к файлу с иконкой (по умолчанию None, т.е. без иконки).
+        title: заголовок окна (по умолчанию пустой).
+
+    Ничего не возвращает.
+    """
     msg = QMessageBox()
     if icon_path:
         pixmap = QPixmap(icon_path)
@@ -36,14 +55,31 @@ def message(text="", icon_path=None, title=""):
     msg.exec()
 
 
-def format_time(seconds):
+def format_time(seconds: int) -> str:
+    """
+    Форматирует время в секундах в виде часов, минут и секунд.
+
+    Аргументы:
+        seconds: время в секундах.
+
+    Возвращает:
+        отформатированное время в виде строки в формате HH:MM:SS.
+    """
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     seconds = seconds % 60
     return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
-def get_active_app_name():
+def get_active_app_name() -> str:
+    """
+    Возвращает имя активного приложения на Mac OS X.
+
+    Не принимает аргументов.
+
+    Возвращает:
+        имя активного приложения в виде строки.
+    """
     script = """
     tell application "System Events"
         set frontApp to name of first application process whose frontmost is true
@@ -168,7 +204,14 @@ class TimeTracker(QWidget):
         self.setLayout(self.main_layout)
         self.show()
 
-    def show_diagram(self):
+    def show_diagram(self) -> None:
+        """
+        Отображает диаграмму с процентным распределением времени, проведенного в разных приложениях.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         self.chart_window = QtWidgets.QMainWindow()
         self.chart_widget = QtCharts.QChartView()
         self.chart = QtCharts.QChart()
@@ -191,7 +234,14 @@ class TimeTracker(QWidget):
         self.chart_window.setCentralWidget(self.chart_widget)
         self.chart_window.show()
 
-    def select_path(self):
+    def select_path(self) -> None:
+        """
+        Позволяет пользователю выбрать путь к папке, в которую будет сохранен отчет.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         # создаем диалоговое окно для выбора папки
         dialog = QFileDialog(self)
         # устанавливаем заголовок и режим выбора папки
@@ -206,7 +256,14 @@ class TimeTracker(QWidget):
         self.label_directory.setText(f"Путь: {self.path_write}")
 
     # Метод для обработки переключения режима работы
-    def set_mode(self):
+    def set_mode(self) -> None:
+        """
+        Устанавливает режим работы программы в зависимости от выбранного переключателя.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         radio = self.sender()
         if radio.isChecked():
             self.mode = radio.text()
@@ -218,16 +275,39 @@ class TimeTracker(QWidget):
                 self.limit = None
 
     # Метод для установки лимита времени
-    def set_limit(self, time_limit):
+    def set_limit(self, time_limit: QtCore.QTime) -> None:
+        """
+        Устанавливает лимит времени в секундах из заданного объекта QTime.
+
+        Аргументы:
+            time_limit: объект QTime, содержащий лимит времени.
+
+        Ничего не возвращает.
+        """
         self.limit = time_limit.hour() * 3600 + time_limit.minute() * 60 + time_limit.second()
 
-    def sum_values(self):
+    def sum_values(self) -> int:
+        """
+        Суммирует значения времени, проведенного в разных приложениях.
+
+        Не принимает аргументов.
+
+        Возвращает:
+            сумму значений в секундах в виде целого числа.
+        """
         total = 0
         for value in self.processes.values():
             total += value
         return total
 
-    def send_to_telegram(self):
+    def send_to_telegram(self) -> None:
+        """
+        Отправляет отчет в виде текстового файла в чат Telegram.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         message('Статистика успешно загружена', icon_path=None, title="Успешно")
         document = open(self.path_write, "rb")  # Открыть файл со статистикой
         url = f"https://api.telegram.org/bot{self.TOKEN}/sendDocument?chat_id={self.chat_id}"  # Сформировать URL для отправки документа
@@ -235,7 +315,14 @@ class TimeTracker(QWidget):
             f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
         requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
 
-    def report(self):
+    def report(self) -> None:
+        """
+        Сохраняет отчет о времени, проведенном в разных приложениях, в текстовый файл и отправляет его в Telegram.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         self.current_process = None
 
         with open(self.path_write, "w") as f:
@@ -245,7 +332,14 @@ class TimeTracker(QWidget):
                 f.write(f"{{{app}: {str(datetime.timedelta(seconds=time))}}}\n")
         self.send_to_telegram()
 
-    def start(self):
+    def start(self) -> None:
+        """
+        Запускает таймер и начинает считывать активные приложения.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         self.set_mode()
         self.report_button.setEnabled(True)
         self.timer_radio.setEnabled(False)
@@ -257,7 +351,14 @@ class TimeTracker(QWidget):
         self.timer.start(1000)
         message('Считывание процессов начато', icon_path=None, title="Успешно")
 
-    def pause(self):
+    def pause(self) -> None:
+        """
+        Приостанавливает таймер и останавливает считывание активных приложений.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         self.pause_button.setEnabled(False)
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(True)
@@ -267,7 +368,14 @@ class TimeTracker(QWidget):
         self.pause_time = QTime.currentTime()
 
     # Метод для обработки нажатия на кнопку Стоп
-    def stop(self):
+    def stop(self) -> None:
+        """
+        Останавливает таймер, сохраняет и отправляет отчет, очищает таблицу и сбрасывает все переменные.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         self.report()
         self.report_button.setEnabled(False)
         self.timer_radio.setEnabled(True)
@@ -285,7 +393,14 @@ class TimeTracker(QWidget):
 
         message('Считывание процессов завершено', icon_path=None, title="Успешно")
 
-    def add_to_table(self):
+    def add_to_table(self) -> None:
+        """
+        Добавляет данные о времени, проведенном в разных приложениях, в таблицу.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         self.process_table.setRowCount(len(self.processes))
         row = 0
         for app, time in self.processes.items():
@@ -295,12 +410,27 @@ class TimeTracker(QWidget):
             self.process_table.setItem(row, 1, time_item)
             row += 1
 
-    def clear_table(self):
+    def clear_table(self) -> None:
+        """
+        Очищает таблицу от всех данных.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         row_count = self.process_table.rowCount()
         for i in range(row_count - 1, -1, -1):
             self.process_table.removeRow(i)
 
-    def add_time_stats(self, app_name):
+    def add_time_stats(self, app_name: str) -> None:
+        """
+        Увеличивает значение времени для заданного приложения на одну секунду и обновляет таблицу.
+
+        Аргументы:
+            app_name: имя приложения, для которого нужно увеличить время.
+
+        Ничего не возвращает.
+        """
         self.add_to_table()
         if app_name in self.processes:
             self.processes[app_name] += 1
@@ -308,7 +438,14 @@ class TimeTracker(QWidget):
             self.processes[app_name] = 1
 
     # Главный метод обработки
-    def update(self):
+    def update(self) -> None:
+        """
+        Считывает активное приложение, добавляет время к его значению, обновляет общее время и проверяет лимит.
+
+        Не принимает аргументов.
+
+        Ничего не возвращает.
+        """
         active_process = get_active_app_name()
         self.add_time_stats(active_process)
         self.current_process = get_active_app_name()
