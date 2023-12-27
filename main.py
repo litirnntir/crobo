@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 import requests
+from PyQt6 import QtCore
 
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont
 from PyQt6.QtWidgets import (QApplication, QWidget, QPushButton, QRadioButton, QTimeEdit,
@@ -53,6 +54,8 @@ class TimeTracker(QWidget):
         font = QFont("Point")
         font.setPointSize(20)
         self.setFont(font)
+        # Путь до файла
+        self.path_write = "stats.txt"
         # Фон
         background_image = resource_path("background.png")
         pix = QPixmap(background_image)
@@ -66,26 +69,29 @@ class TimeTracker(QWidget):
         self.label_total_time = QLabel("Прошло времени: 00:00:00")
         self.label_total_time.setStyleSheet("color: white; font-size: 22px")
         self.label_total_time.setFixedSize(400, 30)
-        # Путь до файла
-        self.path_write = "stats.txt"
+        self.label_directory = QLabel(f"Путь: {self.path_write}")
+        self.label_directory.setStyleSheet("color: white; font-size: 14px")
+        self.label_directory.setFixedSize(300, 10)
         # виджеты для кнопок, переключателей, таймера и списка
         self.start_button = QPushButton('Старт')
-        self.start_button.setFixedSize(350, 60)
+        self.start_button.setFixedSize(350, 40)
         self.pause_button = QPushButton('Пауза')
-        self.pause_button.setFixedSize(350, 60)
+        self.pause_button.setFixedSize(350, 40)
         self.stop_button = QPushButton('Стоп')
-        self.stop_button.setFixedSize(350, 60)
+        self.stop_button.setFixedSize(350, 40)
         self.path_button = QPushButton('Путь для отчета')
-        self.path_button.setFixedSize(350, 60)
+        self.path_button.setFixedSize(350, 40)
+        self.show_diagramm_button = QPushButton('Показать диаграмму')
+        self.show_diagramm_button.setFixedSize(350, 40)
         self.report_button = QPushButton('Отчет')
         self.report_button.setEnabled(False)
-        self.report_button.setFixedSize(350, 60)
+        self.report_button.setFixedSize(350, 40)
         self.all_time_radio = QRadioButton('Без лимита')
         self.all_time_radio.setStyleSheet("color: white; font-size: 22px;")
-        self.all_time_radio.setFixedSize(350, 60)
+        self.all_time_radio.setFixedSize(350, 40)
         self.timer_radio = QRadioButton('С лимитом')
         self.timer_radio.setStyleSheet("color: white; font-size: 22px;")
-        self.timer_radio.setFixedSize(350, 60)
+        self.timer_radio.setFixedSize(350, 40)
         self.time_edit = QTimeEdit()
         self.time_edit.setFixedSize(350, 40)
         self.process_table = QTableWidget()
@@ -131,6 +137,8 @@ class TimeTracker(QWidget):
         self.left_layout.addWidget(self.pause_button)
         self.left_layout.addWidget(self.stop_button)
         self.left_layout.addWidget(self.path_button)
+        self.left_layout.addWidget(self.show_diagramm_button)
+        self.left_layout.addWidget(self.label_directory)
         self.left_layout.addWidget(self.report_button)
         self.left_layout.addWidget(self.all_time_radio)
         self.left_layout.addWidget(self.timer_radio)
@@ -154,7 +162,7 @@ class TimeTracker(QWidget):
             # обновляем метку с выбранным путем
             self.path_write = path + "/stats.txt"
             # здесь можно добавить код для загрузки отчета в выбранную папку
-
+        self.label_directory.setText(f"Путь: {self.path_write}")
     # Метод для обработки переключения режима работы
     def set_mode(self):
         radio = self.sender()
