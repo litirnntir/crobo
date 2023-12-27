@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import subprocess
 import sys
@@ -121,6 +122,10 @@ class TimeTracker(QWidget):
         self.mode = 'All time'
         self.limit = None
         self.total_time = 0
+        with open(resource_path("config.json"), "r") as f:
+            data = json.load(f)
+        self.TOKEN = data["TOKEN"]
+        self.chat_id = data["chat_id"]
 
         # сигналы и слоты для обработки событий
         self.start_button.clicked.connect(self.start)
@@ -218,10 +223,8 @@ class TimeTracker(QWidget):
 
     def send_to_telegram(self):
         message('Статистика успешно загружена', icon_path=None, title="Успешно")
-        TOKEN = "6696395500:AAE-WNkKmbgBe-Oi8VkopcKmavYzWpHlfrc"
-        chat_id = "252415518"
         document = open(self.path_write, "rb")  # Открыть файл со статистикой
-        url = f"https://api.telegram.org/bot{TOKEN}/sendDocument?chat_id={chat_id}"  # Сформировать URL для отправки документа
+        url = f"https://api.telegram.org/bot{self.TOKEN}/sendDocument?chat_id={self.chat_id}"  # Сформировать URL для отправки документа
         data = {
             f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
         requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
