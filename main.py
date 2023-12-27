@@ -5,7 +5,7 @@ import subprocess
 import sys
 import time
 import requests
-from PyQt6 import QtCharts
+from PyQt6 import QtCharts, QtWidgets
 
 from PyQt6 import QtCore
 
@@ -169,11 +169,17 @@ class TimeTracker(QWidget):
         self.show()
 
     def show_diagram(self):
+        self.chart_window = QtWidgets.QMainWindow()
+        self.chart_widget = QtCharts.QChartView()
+        self.chart = QtCharts.QChart()
+        self.series = QtCharts.QBarSeries()
         for app, time in self.processes.items():
             bar = QtCharts.QBarSet(app)
             bar.append(time / self.sum_values() * 100)
             self.series.append(bar)
         self.chart.addSeries(self.series)
+        self.axis_x = QtCharts.QBarCategoryAxis()
+        self.axis_y = QtCharts.QValueAxis()
         self.axis_x.setTitleText("Приложения")
         self.axis_y.setTitleText("Процент использования")
         self.chart.addAxis(self.axis_x, QtCore.Qt.AlignmentFlag.AlignBottom)
