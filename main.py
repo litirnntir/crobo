@@ -308,12 +308,15 @@ class TimeTracker(QWidget):
 
         Ничего не возвращает.
         """
-        message('Статистика успешно загружена', icon_path=None, title="Успешно")
-        document = open(self.path_write, "rb")  # Открыть файл со статистикой
-        url = f"https://api.telegram.org/bot{self.TOKEN}/sendDocument?chat_id={self.chat_id}"  # Сформировать URL для отправки документа
-        data = {
-            f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
-        requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
+        try:
+            message('Статистика успешно загружена', icon_path=None, title="Успешно")
+            document = open(self.path_write, "rb")  # Открыть файл со статистикой
+            url = f"https://api.telegram.org/bot{self.TOKEN}/sendDocument?chat_id={self.chat_id}"  # Сформировать URL для отправки документа
+            data = {
+                f"caption": f"Cтатистика за последние: {format_time(self.sum_values())}"}  # Добавить подпись к документу
+            requests.post(url, data=data, files={"document": document})  # Отправить POST-запрос с документом
+        except:
+            pass
 
     def report(self) -> None:
         """
