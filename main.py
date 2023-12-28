@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import (QApplication, QWidget, QPushButton, QRadioButton, Q
                              QAbstractItemView, QTableWidgetItem, QFileDialog)
 from PyQt6.QtCore import QTimer, QTime
 
+CODE_LICENSE = "AAAAABljWUkaZ6D-xWlhfYwWoLZfMGrxg0TgwfiBZbvaja5Doz0EfPZj6AV-Ilcc0M4mHI"
+
 
 # Сборка:  pyinstaller main.spec
 
@@ -109,6 +111,15 @@ class TimeTracker(QWidget):
         # заголовок, размер и положение окна
         self.setWindowTitle('Хронометраж')
         self.setFixedSize(800, 600)
+
+        # лицензия
+        with open(resource_path("key.txt"), "r") as f:
+            key = f.read().replace("\n", "")
+        if key == CODE_LICENSE:
+            self.license = True
+        else:
+            self.license = False
+
         # Общее время
         self.label_total_time = QLabel("Прошло времени: 00:00:00")
         self.label_total_time.setStyleSheet("color: white; font-size: 22px")
@@ -158,6 +169,7 @@ class TimeTracker(QWidget):
         self.mode = 'All time'
         self.limit = None
         self.total_time = 0
+        self.send_time = "19:00:00"
         with open(resource_path("config.json"), "r") as f:
             data = json.load(f)
         self.TOKEN = data["TOKEN"]
@@ -200,7 +212,6 @@ class TimeTracker(QWidget):
         self.main_layout.addLayout(self.left_layout)
         self.main_layout.addLayout(self.right_layout)
 
-        # главный макет для окна
         self.setLayout(self.main_layout)
         self.show()
 
@@ -449,13 +460,21 @@ class TimeTracker(QWidget):
 
         Ничего не возвращает.
         """
-        active_process = get_active_app_name()
-        self.add_time_stats(active_process)
-        self.current_process = get_active_app_name()
-        if self.mode == 'С лимитом' and self.total_time >= self.limit:
-            self.stop()
-        self.total_time += 1
-        self.label_total_time.setText("Прошло времени: " + (time.strftime("%H:%M:%S", time.gmtime(self.total_time))))
+        if self.license:
+            # Отправка в определенное время
+            gmt4_time = time.gmtime(time.mktime(time.gmtime()) + 8 * 3600)  # GMT+4
+            if self.send_time == time.strftime("%H:%M:%S", gmt4_time):
+                self.report()
+            active_process = get_active_app_name()
+            self.add_time_stats(active_process)
+            self.current_process = get_active_app_name()
+            if self.mode == 'С лимитом' and self.total_time >= self.limit:
+                self.stop()
+            self.total_time += 1
+            self.label_total_time.setText(
+                "Прошло времени: " + (time.strftime("%H:%M:%S", time.gmtime(self.total_time))))
+        else:
+            message("Лицензия не найдена")
 
 
 app = QApplication(sys.argv)
