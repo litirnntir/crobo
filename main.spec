@@ -5,7 +5,8 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('/Users/aleksandragorbuncova/Crono/chrono.icns', '.'),
+           ('/Users/aleksandragorbuncova/Crono/background.png', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -31,6 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='/Users/aleksandragorbuncova/Crono/chrono.icns'
 )
 coll = COLLECT(
     exe,
@@ -40,4 +42,13 @@ coll = COLLECT(
     upx=True,
     upx_exclude=[],
     name='main',
+    icon='/Users/aleksandragorbuncova/Crono/chrono.icns'
 )
+
+app = BUNDLE(
+    exe,
+    name='Croak.app',
+    icon='/Users/aleksandragorbuncova/Crono/chrono.icns',
+    bundle_identifier=None,
+)
+
