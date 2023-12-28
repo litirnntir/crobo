@@ -163,7 +163,7 @@ class TimeTracker(QWidget):
         self.pause_button.setEnabled(False)
         self.time_edit.setEnabled(False)
         self.timer = QTimer()
-        with open(str("stats.json"), "r") as file:
+        with open(str(resource_path("stats.json")), "r") as file:
             data = json.load(file)
         self.processes = data # процессы и время
         self.current_process = None
@@ -453,7 +453,7 @@ class TimeTracker(QWidget):
             self.processes[app_name] += 1
         else:
             self.processes[app_name] = 1
-        with open("stats.json", "r+") as f:
+        with open(resource_path("stats.json"), "r+") as f:
             data = json.load(f)
             data[app_name] = self.processes[app_name]
             f.seek(0)
