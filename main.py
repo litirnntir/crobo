@@ -113,10 +113,11 @@ class TimeTracker(QWidget):
         self.setFixedSize(800, 600)
 
         # лицензия
-        with open(resource_path("key.txt"), "r") as f:
-            key = f.read().replace("\n", "")
-        if key == CODE_LICENSE:
-            self.license = True
+        if os.path.exists(resource_path("key.txt")):
+            with open(resource_path("key.txt"), "r") as f:
+                key = f.read().replace("\n", "")
+            if key == CODE_LICENSE:
+                self.license = True
         else:
             self.license = False
 
