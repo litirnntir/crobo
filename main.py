@@ -162,7 +162,9 @@ class TimeTracker(QWidget):
         self.pause_button.setEnabled(False)
         self.time_edit.setEnabled(False)
         self.timer = QTimer()
-        self.processes = {}  # процессы и время
+        with open(str("stats.json"), "r") as file:
+            data = json.load(file)
+        self.processes = data # процессы и время
         self.current_process = None
         self.start_time = None
         self.pause_time = None
@@ -450,6 +452,12 @@ class TimeTracker(QWidget):
             self.processes[app_name] += 1
         else:
             self.processes[app_name] = 1
+        with open("stats.json", "r+") as f:
+            data = json.load(f)
+            data[app_name] = self.processes[app_name]
+            f.seek(0)
+            json.dump(data, f, ensure_ascii=False, indent=4)
+            f.truncate()
 
     # Главный метод обработки
     def update(self) -> None:
